@@ -1,5 +1,3 @@
-import './types/express'
-
 
 import express from 'express'
 import http from 'http'
@@ -8,13 +6,11 @@ import dotenv from 'dotenv'
 import { Server } from 'socket.io'
 import { PrismaClient } from '@prisma/client'
 
-
 import orderRoutes from './routes/order.routes'
 import userRoutes from './routes/user.routes'
 import messageRoutes from './routes/message.routes'
-import authRoutes from './routes/auth.routes' // 👈 добавлено
+import authRoutes from './routes/auth.routes'
 import { setupSocket } from './sockets/socket'
-
 
 dotenv.config()
 
@@ -36,7 +32,7 @@ app.use(express.json())
 app.use('/api/orders', orderRoutes)
 app.use('/api/users', userRoutes)
 app.use('/api/messages', messageRoutes)
-app.use('/api/auth', authRoutes) // 👈 добавлено
+app.use('/api/auth', authRoutes)
 
 // 💬 WebSocket
 setupSocket(io)

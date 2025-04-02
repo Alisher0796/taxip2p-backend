@@ -7,17 +7,27 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Role {
+  driver
+  passenger
+}
+
+enum OrderStatus {
+  pending
+  confirmed
+  completed
+}
+
 model User {
   id        String   @id @default(uuid())
   username  String
   telegramId String  @unique
-  role      String
+  role      Role
   createdAt DateTime @default(now())
   ordersAsPassenger Order[] @relation("PassengerOrders")
   ordersAsDriver    Order[] @relation("DriverOrders")
   messages          Message[]
 }
-
 
 model Order {
   id          String   @id @default(uuid())
@@ -26,7 +36,7 @@ model Order {
   driver      User?    @relation("DriverOrders", fields: [driverId], references: [id])
   driverId    String?
   price       Float
-  status      String
+  status      OrderStatus
   createdAt   DateTime @default(now())
   completedAt DateTime?
   messages    Message[]

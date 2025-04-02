@@ -1,7 +1,7 @@
 import { Request, Response } from 'express'
-import { prisma } from '../server'
+import { prisma } from '../lib/prisma'
+import { createOrderSchema, updateOrderSchema } from '../validators/order.validator'
 
-// Получить все заказы текущего пользователя
 export const getAllOrders = async (req: Request, res: Response): Promise<void> => {
   const user = req.user
 
@@ -12,70 +12,108 @@ export const getAllOrders = async (req: Request, res: Response): Promise<void> =
 
   try {
     const orders = await prisma.order.findMany({
-      where: user.role === 'passenger'
-        ? { passengerId: user.id }
-        : { driverId: user.id },
+      where: {
+        OR: [
+          { passengerId: user.id },
+          { driverId: user.id }
+        ]
+      },
       include: {
         passenger: true,
         driver: true,
-        messages: true,
       },
       orderBy: {
-        createdAt: 'desc',
-      },
+        createdAt: 'desc'
+      }
     })
 
     res.json(orders)
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch orders' })
+    console.error('Error fetching orders:', error)
+    res.status(500).json({ error: 'Server error' })
   }
 }
 
-// Создать новый заказ
 export const createOrder = async (req: Request, res: Response): Promise<void> => {
-  const { passengerId, price } = req.body
+  const user = req.user
+
+  if (!user) {
+    res.status(401).json({ error: 'Unauthorized' })
+    return
+  }
+
+  const result = createOrderSchema.safeParse(req.body)
+  if (!result.success) {
+    res.status(400).json({ error: result.error.errors })
+    return
+  }
+
+  const { price } = result.data
+
   try {
-    const order = await prisma.order.create({
+    const newOrder = await prisma.order.create({
       data: {
-        passengerId,
         price,
         status: 'pending',
-      },
+        passengerId: user.id
+      }
     })
-    res.status(201).json(order)
+
+    res.status(201).json(newOrder)
   } catch (error) {
-    res.status(500).json({ error: 'Failed to create order' })
+    console.error('Error creating order:', error)
+    res.status(500).json({ error: 'Could not create order' })
   }
 }
 
-// Обновить заказ: назначить водителя или изменить статус
 export const updateOrder = async (req: Request, res: Response): Promise<void> => {
-  const { id } = req.params
-  const { driverId, status } = req.body
+  const user = req.user
+  const id = req.params.id
+
+  if (!user) {
+    res.status(401).json({ error: 'Unauthorized' })
+    return
+  }
+
+  const result = updateOrderSchema.safeParse(req.body)
+  if (!result.success) {
+    res.status(400).json({ error: result.error.errors })
+    return
+  }
+
+  const { price } = result.data
+
   try {
-    const order = await prisma.order.update({
+    const updated = await prisma.order.update({
       where: { id },
-      data: { driverId, status },
+      data: { price }
     })
-    res.json(order)
+
+    res.json(updated)
   } catch (error) {
-    res.status(500).json({ error: 'Failed to update order' })
+    console.error('Error updating order:', error)
+    res.status(500).json({ error: 'Could not update order' })
   }
 }
 
-// Завершить поездку
 export const completeOrder = async (req: Request, res: Response): Promise<void> => {
-  const { id } = req.params
+  const user = req.user
+  const id = req.params.id
+
+  if (!user) {
+    res.status(401).json({ error: 'Unauthorized' })
+    return
+  }
+
   try {
-    const completedOrder = await prisma.order.update({
+    const completed = await prisma.order.update({
       where: { id },
-      data: {
-        status: 'completed',
-        completedAt: new Date(),
-      },
+      data: { status: 'completed' }
     })
-    res.json(completedOrder)
+
+    res.json(completed)
   } catch (error) {
-    res.status(500).json({ error: 'Failed to complete order' })
+    console.error('Error completing order:', error)
+    res.status(500).json({ error: 'Could not complete order' })
   }
 }

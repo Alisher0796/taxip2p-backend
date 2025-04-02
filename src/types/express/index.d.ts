@@ -1,9 +1,12 @@
-import { User } from "@prisma/client"; // Это твой тип пользователя из Prisma
+import 'express';
 
-declare global {
-  namespace Express {
-    interface Request {
-      user?: User;
-    }
+export interface AuthUser {
+  id: string;
+  role: 'passenger' | 'driver';
+}
+
+declare module 'express-serve-static-core' {
+  interface Request {
+    user?: AuthUser;
   }
 }

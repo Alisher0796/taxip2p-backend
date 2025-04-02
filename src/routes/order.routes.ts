@@ -1,18 +1,24 @@
-import express from 'express'
+import express from 'express';
 import {
   getAllOrders,
   createOrder,
   updateOrder,
   completeOrder
-} from '../controllers/order.controller'
-import { authenticateTelegram } from '../middleware/auth.middleware'
+} from '../controllers/order.controller';
+import { authenticateTelegram } from '../middleware/auth.middleware';
 
-const router = express.Router()
+const router = express.Router();
 
-// 🔐 Все действия требуют авторизации по Telegram ID
-router.get('/', authenticateTelegram, getAllOrders)
-router.post('/', authenticateTelegram, createOrder)
-router.put('/:id', authenticateTelegram, updateOrder)
-router.put('/:id/complete', authenticateTelegram, completeOrder)
+// 🔐 Получить все заказы текущего пользователя
+router.get('/', authenticateTelegram, getAllOrders);
 
-export default router
+// 📝 Создать новый заказ
+router.post('/', authenticateTelegram, createOrder);
+
+// 🔄 Обновить заказ по ID
+router.put('/:id', authenticateTelegram, updateOrder);
+
+// ✅ Завершить заказ
+router.put('/:id/complete', authenticateTelegram, completeOrder);
+
+export default router;
