@@ -7,7 +7,9 @@ export const authenticateTelegram = async (
   res: Response,
   next: NextFunction
 ): Promise<void> => {
-  const telegramId = req.header('x-telegram-id');
+  const rawId = req.header('x-telegram-id');
+  const username = req.header('x-telegram-username') || 'Anonymous'; // ⬅️ добавили
+  const telegramId = String(rawId);
 
   if (!telegramId) {
     res.status(401).json({ error: 'No Telegram ID provided' });
@@ -15,18 +17,23 @@ export const authenticateTelegram = async (
   }
 
   try {
-    const user: User | null = await prisma.user.findUnique({
+    let user: User | null = await prisma.user.findUnique({
       where: { telegramId },
     });
 
     if (!user) {
-      res.status(401).json({ error: 'User not found' });
-      return;
+      user = await prisma.user.create({
+        data: {
+          telegramId,
+          username: String(username), // ⬅️ добавлено
+          role: 'passenger',
+        },
+      });
     }
 
     req.user = {
       id: user.id,
-      role: user.role as 'passenger' | 'driver', // или типизируй правильно, если role строго ограничен
+      role: user.role as 'passenger' | 'driver',
     };
 
     next();

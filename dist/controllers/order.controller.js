@@ -1,8 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.completeOrder = exports.updateOrder = exports.createOrder = exports.getAllOrders = void 0;
+exports.acceptOrder = exports.completeOrder = exports.updateOrder = exports.createOrder = exports.getActiveOrders = exports.getAllOrders = void 0;
 const prisma_1 = require("../lib/prisma");
+const client_1 = require("@prisma/client");
 const order_validator_1 = require("../validators/order.validator");
+// 🔹 Получить все заказы пользователя (пассажир или водитель)
 const getAllOrders = async (req, res) => {
     const user = req.user;
     if (!user) {
@@ -33,6 +35,32 @@ const getAllOrders = async (req, res) => {
     }
 };
 exports.getAllOrders = getAllOrders;
+// 🔹 Получить активные заказы пассажира
+const getActiveOrders = async (req, res) => {
+    const user = req.user;
+    if (!user) {
+        res.status(401).json({ error: 'Unauthorized' });
+        return;
+    }
+    try {
+        const orders = await prisma_1.prisma.order.findMany({
+            where: {
+                passengerId: user.id,
+                status: client_1.OrderStatus.pending
+            },
+            orderBy: {
+                createdAt: 'desc'
+            }
+        });
+        res.json(orders);
+    }
+    catch (error) {
+        console.error('Error fetching active orders:', error);
+        res.status(500).json({ error: 'Could not fetch active orders' });
+    }
+};
+exports.getActiveOrders = getActiveOrders;
+// 🔹 Создать заказ
 const createOrder = async (req, res) => {
     const user = req.user;
     if (!user) {
@@ -49,7 +77,7 @@ const createOrder = async (req, res) => {
         const newOrder = await prisma_1.prisma.order.create({
             data: {
                 price,
-                status: 'pending',
+                status: client_1.OrderStatus.pending,
                 passengerId: user.id
             }
         });
@@ -61,6 +89,7 @@ const createOrder = async (req, res) => {
     }
 };
 exports.createOrder = createOrder;
+// 🔹 Обновить заказ
 const updateOrder = async (req, res) => {
     const user = req.user;
     const id = req.params.id;
@@ -87,6 +116,7 @@ const updateOrder = async (req, res) => {
     }
 };
 exports.updateOrder = updateOrder;
+// 🔹 Завершить заказ
 const completeOrder = async (req, res) => {
     const user = req.user;
     const id = req.params.id;
@@ -97,7 +127,7 @@ const completeOrder = async (req, res) => {
     try {
         const completed = await prisma_1.prisma.order.update({
             where: { id },
-            data: { status: 'completed' }
+            data: { status: client_1.OrderStatus.completed }
         });
         res.json(completed);
     }
@@ -107,3 +137,27 @@ const completeOrder = async (req, res) => {
     }
 };
 exports.completeOrder = completeOrder;
+// 🔹 Принять заказ (водителем)
+const acceptOrder = async (req, res) => {
+    const user = req.user;
+    const id = req.params.id;
+    if (!user) {
+        res.status(401).json({ error: 'Unauthorized' });
+        return;
+    }
+    try {
+        const accepted = await prisma_1.prisma.order.update({
+            where: { id },
+            data: {
+                status: client_1.OrderStatus.accepted,
+                driverId: user.id
+            }
+        });
+        res.json(accepted);
+    }
+    catch (error) {
+        console.error('Error accepting order:', error);
+        res.status(500).json({ error: 'Could not accept order' });
+    }
+};
+exports.acceptOrder = acceptOrder;

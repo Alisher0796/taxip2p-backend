@@ -9,10 +9,14 @@ const auth_middleware_1 = require("../middleware/auth.middleware");
 const router = express_1.default.Router();
 // 🔐 Получить все заказы текущего пользователя
 router.get('/', auth_middleware_1.authenticateTelegram, order_controller_1.getAllOrders);
+// 🔍 Получить активные заказы (новый маршрут!)
+router.get('/active', auth_middleware_1.authenticateTelegram, order_controller_1.getActiveOrders); // ⬅️ вот он
 // 📝 Создать новый заказ
 router.post('/', auth_middleware_1.authenticateTelegram, order_controller_1.createOrder);
 // 🔄 Обновить заказ по ID
 router.put('/:id', auth_middleware_1.authenticateTelegram, order_controller_1.updateOrder);
 // ✅ Завершить заказ
 router.put('/:id/complete', auth_middleware_1.authenticateTelegram, order_controller_1.completeOrder);
+// ✅ Новый маршрут для принятия заказа
+router.post('/:id/accept', auth_middleware_1.authenticateTelegram, order_controller_1.acceptOrder);
 exports.default = router;

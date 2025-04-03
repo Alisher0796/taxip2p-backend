@@ -3,22 +3,29 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.authenticateTelegram = void 0;
 const prisma_1 = require("../lib/prisma");
 const authenticateTelegram = async (req, res, next) => {
-    const telegramId = req.header('x-telegram-id');
+    const rawId = req.header('x-telegram-id');
+    const username = req.header('x-telegram-username') || 'Anonymous'; // ⬅️ добавили
+    const telegramId = String(rawId);
     if (!telegramId) {
         res.status(401).json({ error: 'No Telegram ID provided' });
         return;
     }
     try {
-        const user = await prisma_1.prisma.user.findUnique({
+        let user = await prisma_1.prisma.user.findUnique({
             where: { telegramId },
         });
         if (!user) {
-            res.status(401).json({ error: 'User not found' });
-            return;
+            user = await prisma_1.prisma.user.create({
+                data: {
+                    telegramId,
+                    username: String(username), // ⬅️ добавлено
+                    role: 'passenger',
+                },
+            });
         }
         req.user = {
             id: user.id,
-            role: user.role, // или типизируй правильно, если role строго ограничен
+            role: user.role,
         };
         next();
     }

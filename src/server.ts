@@ -1,4 +1,3 @@
-
 import express from 'express'
 import http from 'http'
 import cors from 'cors'
@@ -16,25 +15,43 @@ dotenv.config()
 
 const app = express()
 const server = http.createServer(app)
+
+const CLIENT_URL = process.env.CLIENT_URL || '*'
+
+// 💬 WebSocket
 const io = new Server(server, {
   cors: {
-    origin: process.env.CLIENT_URL,
+    origin: CLIENT_URL,
     methods: ['GET', 'POST'],
+    credentials: true,
+    allowedHeaders: ['x-telegram-id'], // ✅ разрешаем custom-заголовок
   },
 })
 
 export const prisma = new PrismaClient()
 
-app.use(cors())
+// ✅ CORS middleware для REST API
+app.use(cors({
+  origin: CLIENT_URL,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-telegram-id'], // ✅ здесь тоже
+  credentials: true,
+}))
+
 app.use(express.json())
 
-// 📦 Роуты API
+// 📦 API Роуты
 app.use('/api/orders', orderRoutes)
 app.use('/api/users', userRoutes)
 app.use('/api/messages', messageRoutes)
 app.use('/api/auth', authRoutes)
 
-// 💬 WebSocket
+// 🧪 Test route
+app.get('/', (req, res) => {
+  res.send('🚀 TaxiP2P backend работает! CORS настроен!')
+})
+
+// 🔌 WebSocket подключение
 setupSocket(io)
 
 const PORT = process.env.PORT || 5000

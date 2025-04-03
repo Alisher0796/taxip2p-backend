@@ -20,18 +20,29 @@ const app = (0, express_1.default)();
 const server = http_1.default.createServer(app);
 const io = new socket_io_1.Server(server, {
     cors: {
-        origin: process.env.CLIENT_URL,
+        origin: process.env.CLIENT_URL || '*',
         methods: ['GET', 'POST'],
+        credentials: true,
     },
 });
 exports.prisma = new client_1.PrismaClient();
-app.use((0, cors_1.default)());
+// ✅ Настроенный CORS (обязательно ДО express.json)
+app.use((0, cors_1.default)({
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true
+}));
 app.use(express_1.default.json());
-// 📦 Роуты API
+// 📦 API Роуты
 app.use('/api/orders', order_routes_1.default);
 app.use('/api/users', user_routes_1.default);
 app.use('/api/messages', message_routes_1.default);
 app.use('/api/auth', auth_routes_1.default);
+// ✅ Тестовый root-роут для проверки
+app.get('/', (req, res) => {
+    res.send('🚀 TaxiP2P backend работает! CORS настроен!');
+});
 // 💬 WebSocket
 (0, socket_1.setupSocket)(io);
 const PORT = process.env.PORT || 5000;

@@ -1,10 +1,11 @@
 import { Request, Response } from 'express'
 import { prisma } from '../lib/prisma'
+import { OrderStatus } from '@prisma/client'
 import { createOrderSchema, updateOrderSchema } from '../validators/order.validator'
 
+// 🔹 Получить все заказы пользователя (пассажир или водитель)
 export const getAllOrders = async (req: Request, res: Response): Promise<void> => {
   const user = req.user
-
   if (!user) {
     res.status(401).json({ error: 'Unauthorized' })
     return
@@ -34,9 +35,64 @@ export const getAllOrders = async (req: Request, res: Response): Promise<void> =
   }
 }
 
+// 🔹 Получить активные заказы пассажира
+export const getActiveOrders = async (req: Request, res: Response): Promise<void> => {
+  const user = req.user
+  if (!user) {
+    res.status(401).json({ error: 'Unauthorized' })
+    return
+  }
+
+  try {
+    const orders = await prisma.order.findMany({
+      where: {
+        passengerId: user.id,
+        status: OrderStatus.pending
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    })
+
+    res.json(orders)
+  } catch (error) {
+    console.error('Error fetching active orders:', error)
+    res.status(500).json({ error: 'Could not fetch active orders' })
+  }
+}
+
+// 🔹 Получить активные заказы водителя
+export const getDriverActiveOrders = async (req: Request, res: Response): Promise<void> => {
+  const user = req.user
+  if (!user) {
+    res.status(401).json({ error: 'Unauthorized' })
+    return
+  }
+
+  try {
+    const orders = await prisma.order.findMany({
+      where: {
+        driverId: user.id,
+        status: OrderStatus.accepted
+      },
+      include: {
+        passenger: true
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    })
+
+    res.json(orders)
+  } catch (error) {
+    console.error('Error fetching driver orders:', error)
+    res.status(500).json({ error: 'Could not fetch driver orders' })
+  }
+}
+
+// 🔹 Создать заказ
 export const createOrder = async (req: Request, res: Response): Promise<void> => {
   const user = req.user
-
   if (!user) {
     res.status(401).json({ error: 'Unauthorized' })
     return
@@ -54,7 +110,7 @@ export const createOrder = async (req: Request, res: Response): Promise<void> =>
     const newOrder = await prisma.order.create({
       data: {
         price,
-        status: 'pending',
+        status: OrderStatus.pending,
         passengerId: user.id
       }
     })
@@ -66,10 +122,10 @@ export const createOrder = async (req: Request, res: Response): Promise<void> =>
   }
 }
 
+// 🔹 Обновить заказ
 export const updateOrder = async (req: Request, res: Response): Promise<void> => {
   const user = req.user
   const id = req.params.id
-
   if (!user) {
     res.status(401).json({ error: 'Unauthorized' })
     return
@@ -96,10 +152,10 @@ export const updateOrder = async (req: Request, res: Response): Promise<void> =>
   }
 }
 
+// 🔹 Завершить заказ
 export const completeOrder = async (req: Request, res: Response): Promise<void> => {
   const user = req.user
   const id = req.params.id
-
   if (!user) {
     res.status(401).json({ error: 'Unauthorized' })
     return
@@ -108,12 +164,37 @@ export const completeOrder = async (req: Request, res: Response): Promise<void> 
   try {
     const completed = await prisma.order.update({
       where: { id },
-      data: { status: 'completed' }
+      data: { status: OrderStatus.completed }
     })
 
     res.json(completed)
   } catch (error) {
     console.error('Error completing order:', error)
     res.status(500).json({ error: 'Could not complete order' })
+  }
+}
+
+// 🔹 Принять заказ (водителем)
+export const acceptOrder = async (req: Request, res: Response): Promise<void> => {
+  const user = req.user
+  const id = req.params.id
+  if (!user) {
+    res.status(401).json({ error: 'Unauthorized' })
+    return
+  }
+
+  try {
+    const accepted = await prisma.order.update({
+      where: { id },
+      data: {
+        status: OrderStatus.accepted,
+        driverId: user.id
+      }
+    })
+
+    res.json(accepted)
+  } catch (error) {
+    console.error('Error accepting order:', error)
+    res.status(500).json({ error: 'Could not accept order' })
   }
 }
