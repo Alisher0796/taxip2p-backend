@@ -1,11 +1,11 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.updateUser = exports.createUser = exports.getUserById = exports.getAllUsers = void 0;
-const server_1 = require("../server");
+const prisma_1 = require("../lib/prisma");
 // Получить всех пользователей
 const getAllUsers = async (req, res) => {
     try {
-        const users = await server_1.prisma.user.findMany();
+        const users = await prisma_1.prisma.user.findMany();
         res.json(users);
     }
     catch {
@@ -17,7 +17,7 @@ exports.getAllUsers = getAllUsers;
 const getUserById = async (req, res) => {
     const { id } = req.params;
     try {
-        const user = await server_1.prisma.user.findUnique({ where: { id } });
+        const user = await prisma_1.prisma.user.findUnique({ where: { id } });
         if (!user) {
             res.status(404).json({ error: 'User not found' });
             return;
@@ -37,7 +37,7 @@ const createUser = async (req, res) => {
         return;
     }
     try {
-        const user = await server_1.prisma.user.create({
+        const user = await prisma_1.prisma.user.create({
             data: { username, role, telegramId }
         });
         res.status(201).json(user);
@@ -52,7 +52,7 @@ const updateUser = async (req, res) => {
     const { id } = req.params;
     const { username, role } = req.body;
     try {
-        const user = await server_1.prisma.user.update({
+        const user = await prisma_1.prisma.user.update({
             where: { id },
             data: { username, role },
         });

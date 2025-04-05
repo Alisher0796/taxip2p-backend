@@ -19,6 +19,14 @@ router.post('/', auth_middleware_1.authenticateTelegram, order_controller_1.crea
 router.put('/:id', auth_middleware_1.authenticateTelegram, order_controller_1.updateOrder);
 // ✅ Завершить заказ
 router.put('/:id/complete', auth_middleware_1.authenticateTelegram, order_controller_1.completeOrder);
-// ✅ Принять заказ (водителем)
-router.post('/:id/accept', auth_middleware_1.authenticateTelegram, order_controller_1.acceptOrder);
+// 💰 Сделать ценовое предложение
+router.post('/:id/offer', auth_middleware_1.authenticateTelegram, order_controller_1.createPriceOffer);
+// ✅ Принять ценовое предложение
+router.post('/:id/offer/accept', auth_middleware_1.authenticateTelegram, order_controller_1.acceptOffer);
+// ❌ Отклонить ценовое предложение
+router.post('/:id/offer/reject', auth_middleware_1.authenticateTelegram, order_controller_1.rejectOffer);
+// 🚗 Начать поездку
+router.post('/:id/start', auth_middleware_1.authenticateTelegram, order_controller_1.startOrder);
+// 🗑 Отменить заказ
+router.post('/:id/cancel', auth_middleware_1.authenticateTelegram, order_controller_1.cancelOrder);
 exports.default = router;

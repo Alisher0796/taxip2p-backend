@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.prisma = void 0;
+exports.io = exports.prisma = void 0;
 const express_1 = __importDefault(require("express"));
 const http_1 = __importDefault(require("http"));
 const cors_1 = __importDefault(require("cors"));
@@ -21,6 +21,10 @@ const server = http_1.default.createServer(app);
 const allowedOrigins = [
     'https://taxip2p-frontend.vercel.app',
     'https://taxip2p-frontend-gp43xwdtr-alishers-projects-e810444a.vercel.app',
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+    'http://localhost:56277',
+    'http://127.0.0.1:56277'
 ];
 console.log('[CORS] Разрешённые источники:', allowedOrigins);
 exports.prisma = new client_1.PrismaClient();
@@ -36,7 +40,13 @@ app.use((0, cors_1.default)({
         }
     },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-telegram-id'], // 💥 must be here
+    allowedHeaders: [
+        'Content-Type',
+        'Authorization',
+        'x-telegram-id',
+        'x-telegram-username',
+        'x-telegram-init-data'
+    ],
     credentials: true
 }));
 app.use(express_1.default.json());
@@ -50,15 +60,15 @@ app.get('/', (req, res) => {
     res.send('🚀 TaxiP2P backend работает! CORS точно работает!');
 });
 // ✅ WebSocket
-const io = new socket_io_1.Server(server, {
+exports.io = new socket_io_1.Server(server, {
     cors: {
         origin: allowedOrigins,
         methods: ['GET', 'POST'],
         credentials: true,
-        allowedHeaders: ['x-telegram-id'] // 👈 тоже обязательно!
+        allowedHeaders: ['x-telegram-id', 'x-telegram-init-data'] // 👈 добавляем init-data
     }
 });
-(0, socket_1.setupSocket)(io);
+(0, socket_1.setupSocket)(exports.io);
 const PORT = process.env.PORT || 8080;
 server.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
