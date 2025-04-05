@@ -19,6 +19,10 @@ const server = http.createServer(app)
 const allowedOrigins = [
   'https://taxip2p-frontend.vercel.app',
   'https://taxip2p-frontend-gp43xwdtr-alishers-projects-e810444a.vercel.app',
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'http://localhost:56277',
+  'http://127.0.0.1:56277'
 ]
 
 console.log('[CORS] Разрешённые источники:', allowedOrigins)
