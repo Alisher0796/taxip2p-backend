@@ -2,60 +2,40 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.authenticateTelegram = void 0;
 const prisma_1 = require("../lib/prisma");
-const client_1 = require("@prisma/client");
-const USER_SELECT_FIELDS = {
-    id: true,
-    username: true,
-    telegramId: true,
-    role: true,
-    carModel: true,
-    carNumber: true,
-    createdAt: true,
-    updatedAt: true,
-    offerCount: true
-};
+const telegram_1 = require("../lib/telegram");
 const authenticateTelegram = async (req, res, next) => {
-    const rawId = req.header('x-telegram-id');
-    const username = req.header('x-telegram-username') || 'Anonymous';
-    const telegramId = String(rawId);
-    if (!telegramId) {
-        res.status(401).json({
-            success: false,
-            error: 'No Telegram ID provided'
-        });
-        return;
-    }
     try {
-        let user = await prisma_1.prisma.user.findUnique({
-            where: { telegramId },
-            select: USER_SELECT_FIELDS
+        const initData = req.headers['x-telegram-init-data'];
+        if (!initData) {
+            return res.status(401).json({ message: 'No Telegram init data provided' });
+        }
+        const telegramData = await (0, telegram_1.verifyTelegramWebAppData)(initData);
+        if (!telegramData || !telegramData.user) {
+            return res.status(401).json({ message: 'Invalid Telegram init data' });
+        }
+        const telegramUser = telegramData.user;
+        const user = await prisma_1.prisma.user.findUnique({
+            where: { telegramId: telegramUser.id.toString() }
         });
         if (!user) {
-            user = await prisma_1.prisma.user.create({
+            const newUser = await prisma_1.prisma.user.create({
                 data: {
-                    telegramId,
-                    username: String(username),
-                    role: client_1.Role.passenger
-                },
-                select: USER_SELECT_FIELDS
+                    telegramId: telegramUser.id.toString(),
+                    username: telegramUser.username || telegramUser.first_name,
+                    role: 'passenger',
+                    offerCount: 0
+                }
             });
+            req.user = newUser;
         }
-        if (!user.role) {
-            res.status(401).json({
-                success: false,
-                error: 'User role not set'
-            });
-            return;
+        else {
+            req.user = user;
         }
-        req.user = user;
         next();
     }
     catch (error) {
-        console.error('Auth error:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Authorization failed'
-        });
+        console.error('Authentication error:', error);
+        res.status(401).json({ message: 'Authentication failed' });
     }
 };
 exports.authenticateTelegram = authenticateTelegram;
