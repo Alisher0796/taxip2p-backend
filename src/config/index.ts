@@ -13,6 +13,7 @@ export const config = {
       process.env.CLIENT_URL || 'https://taxip2p-frontend.vercel.app',
       'https://taxip2p-frontend.vercel.app',
       'https://taxip2p-frontend-gp43xwdtr-alishers-projects-e810444a.vercel.app',
+      'https://taxip2p-frontend-git-main-alishers-projects-e810444a.vercel.app',
       'http://localhost:5173',
       'http://127.0.0.1:5173',
       'http://localhost:3000',
