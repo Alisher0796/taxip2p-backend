@@ -19,7 +19,7 @@ export interface TelegramInitData {
   hash: string;
 }
 
-export const verifyTelegramWebAppData = async (initData: string): Promise<boolean> => {
+export const verifyTelegramWebAppData = (initData: string): TelegramInitData | null => {
   try {
     // Разбираем строку initData
     const params = new URLSearchParams(initData);
@@ -28,7 +28,7 @@ export const verifyTelegramWebAppData = async (initData: string): Promise<boolea
 
     if (!hash || !authDate) {
       console.error('Missing hash or auth_date in initData');
-      return false;
+      return null;
     }
 
     // Проверяем время жизни auth_date
@@ -36,7 +36,7 @@ export const verifyTelegramWebAppData = async (initData: string): Promise<boolea
     const now = Date.now();
     if (now - authTimestamp > config.security.telegramAuthTTL) {
       console.error('Telegram auth data expired');
-      return false;
+      return null;
     }
 
     params.delete('hash');
@@ -58,14 +58,21 @@ export const verifyTelegramWebAppData = async (initData: string): Promise<boolea
       .update(dataCheckString)
       .digest('hex');
 
-    const isValid = hmac === hash;
-    if (!isValid) {
+    if (hmac !== hash) {
       console.error('Invalid Telegram hash');
+      return null;
     }
 
-    return isValid;
+    // Парсим данные пользователя
+    const user = JSON.parse(params.get('user') || '{}');
+    return {
+      query_id: params.get('query_id') || '',
+      user,
+      auth_date: parseInt(authDate),
+      hash
+    };
   } catch (error) {
     console.error('Telegram WebApp verification error:', error);
-    return false;
+    return null;
   }
 };

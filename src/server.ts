@@ -9,6 +9,7 @@ import orderRoutes from './routes/order.routes'
 import userRoutes from './routes/user.routes'
 import messageRoutes from './routes/message.routes'
 import authRoutes from './routes/auth.routes'
+import profileRoutes from './routes/profile.routes'
 import { setupSocket } from './sockets/socket'
 
 dotenv.config()
@@ -44,6 +45,7 @@ app.use('/api/orders', orderRoutes)
 app.use('/api/users', userRoutes)
 app.use('/api/messages', messageRoutes)
 app.use('/api/auth', authRoutes)
+app.use('/api/profile', profileRoutes)
 
 // ✅ Корень
 app.get('/', (req, res) => {
