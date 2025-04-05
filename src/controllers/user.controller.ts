@@ -1,5 +1,7 @@
 import { Request, Response } from 'express'
-import { prisma } from '../server'
+import { prisma } from '../lib/prisma'
+import { Role } from '@prisma/client'
+import { AuthUser } from '../types/auth.types'
 
 // Получить всех пользователей
 export const getAllUsers = async (req: Request, res: Response): Promise<void> => {

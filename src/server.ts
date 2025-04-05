@@ -16,45 +16,62 @@ dotenv.config()
 const app = express()
 const server = http.createServer(app)
 
-const CLIENT_URL = process.env.CLIENT_URL || '*'
+const allowedOrigins = [
+  'https://taxip2p-frontend.vercel.app',
+  'https://taxip2p-frontend-gp43xwdtr-alishers-projects-e810444a.vercel.app',
+]
 
-// 💬 WebSocket
-const io = new Server(server, {
-  cors: {
-    origin: CLIENT_URL,
-    methods: ['GET', 'POST'],
-    credentials: true,
-    allowedHeaders: ['x-telegram-id'], // ✅ разрешаем custom-заголовок
-  },
-})
+console.log('[CORS] Разрешённые источники:', allowedOrigins)
 
 export const prisma = new PrismaClient()
 
-// ✅ CORS middleware для REST API
+// ✅ CORS для REST API
 app.use(cors({
-  origin: CLIENT_URL,
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true)
+    } else {
+      console.log('[CORS] Блокирован origin:', origin)
+      callback(new Error('CORS origin not allowed'))
+    }
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-telegram-id'], // ✅ здесь тоже
-  credentials: true,
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'x-telegram-id',
+    'x-telegram-username',
+    'x-telegram-init-data'
+  ],
+  credentials: true
 }))
 
 app.use(express.json())
 
-// 📦 API Роуты
+// 📦 API
 app.use('/api/orders', orderRoutes)
 app.use('/api/users', userRoutes)
 app.use('/api/messages', messageRoutes)
 app.use('/api/auth', authRoutes)
 
-// 🧪 Test route
+// ✅ Корень
 app.get('/', (req, res) => {
-  res.send('🚀 TaxiP2P backend работает! CORS настроен!')
+  res.send('🚀 TaxiP2P backend работает! CORS точно работает!')
 })
 
-// 🔌 WebSocket подключение
+// ✅ WebSocket
+export const io = new Server(server, {
+  cors: {
+    origin: allowedOrigins,
+    methods: ['GET', 'POST'],
+    credentials: true,
+    allowedHeaders: ['x-telegram-id', 'x-telegram-init-data'] // 👈 добавляем init-data
+  }
+})
+
 setupSocket(io)
 
-const PORT = process.env.PORT || 5000
+const PORT = process.env.PORT || 8080
 server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`)
 })

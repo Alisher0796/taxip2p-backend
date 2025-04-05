@@ -18,34 +18,48 @@ const socket_1 = require("./sockets/socket");
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 const server = http_1.default.createServer(app);
-const io = new socket_io_1.Server(server, {
-    cors: {
-        origin: process.env.CLIENT_URL || '*',
-        methods: ['GET', 'POST'],
-        credentials: true,
-    },
-});
+const allowedOrigins = [
+    'https://taxip2p-frontend.vercel.app',
+    'https://taxip2p-frontend-gp43xwdtr-alishers-projects-e810444a.vercel.app',
+];
+console.log('[CORS] Разрешённые источники:', allowedOrigins);
 exports.prisma = new client_1.PrismaClient();
-// ✅ Настроенный CORS (обязательно ДО express.json)
+// ✅ CORS для REST API
 app.use((0, cors_1.default)({
-    origin: '*',
+    origin: (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        }
+        else {
+            console.log('[CORS] Блокирован origin:', origin);
+            callback(new Error('CORS origin not allowed'));
+        }
+    },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-telegram-id'], // 💥 must be here
     credentials: true
 }));
 app.use(express_1.default.json());
-// 📦 API Роуты
+// 📦 API
 app.use('/api/orders', order_routes_1.default);
 app.use('/api/users', user_routes_1.default);
 app.use('/api/messages', message_routes_1.default);
 app.use('/api/auth', auth_routes_1.default);
-// ✅ Тестовый root-роут для проверки
+// ✅ Корень
 app.get('/', (req, res) => {
-    res.send('🚀 TaxiP2P backend работает! CORS настроен!');
+    res.send('🚀 TaxiP2P backend работает! CORS точно работает!');
 });
-// 💬 WebSocket
+// ✅ WebSocket
+const io = new socket_io_1.Server(server, {
+    cors: {
+        origin: allowedOrigins,
+        methods: ['GET', 'POST'],
+        credentials: true,
+        allowedHeaders: ['x-telegram-id'] // 👈 тоже обязательно!
+    }
+});
 (0, socket_1.setupSocket)(io);
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 8080;
 server.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });

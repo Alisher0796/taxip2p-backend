@@ -1,66 +1,109 @@
-import { Server } from 'socket.io'
-import { prisma } from '../lib/prisma'
+import { Server, Socket } from 'socket.io';
+import { prisma } from '../lib/prisma';
+import { OrderStatus, Role } from '@prisma/client';
+import { AuthUser } from '../types/auth.types';
 
-export function setupSocket(io: Server) {
-  io.use(async (socket, next) => {
-    const telegramId = socket.handshake.headers['x-telegram-id'] as string
+interface SocketUser {
+  id: string;
+  telegramId: string;
+  role: Role;
+}
 
-    if (!telegramId) {
-      return next(new Error('No Telegram ID'))
-    }
+interface ChatMessage {
+  orderId: string;
+  text: string;
+}
 
-    const user = await prisma.user.findUnique({ where: { telegramId } })
-
-    if (!user) {
-      return next(new Error('User not found'))
-    }
-
-    socket.data.user = {
-      id: user.id,
-      role: user.role,
-    }
-
-    next()
-  })
-
-  io.on('connection', (socket) => {
-    const user = socket.data.user
-    console.log(`🟢 Socket connected: ${socket.id} | User: ${user?.id}`)
-
-    socket.on('join', ({ orderId }) => {
-      socket.join(orderId)
-      console.log(`👥 User ${user?.id} joined room for order ${orderId}`)
-    })
-
-    socket.on('chatMessage', async (data) => {
-      const { orderId, text } = data
-      const senderId = user?.id
-
-      if (!orderId || !text || !senderId) {
-        socket.emit('errorMessage', 'Invalid chat message data')
-        return
+export const setupSocket = (io: Server): void => {
+  io.use(async (socket: Socket, next) => {
+    try {
+      const telegramId = socket.handshake.headers['x-telegram-id'] as string;
+      if (!telegramId) {
+        next(new Error('Authentication failed'));
+        return;
       }
 
-      const order = await prisma.order.findUnique({
-        where: { id: orderId },
-      })
+      const user = await prisma.user.findUnique({
+        where: { telegramId }
+      });
 
-      if (!order || order.status !== 'confirmed') {
-        socket.emit('errorMessage', 'Чат недоступен — заказ не подтверждён')
-        return
+      if (!user) {
+        next(new Error('User not found'));
+        return;
       }
 
-      // Сохраняем в БД
-      const message = await prisma.message.create({
-        data: { orderId, senderId, text },
-      })
+      socket.data.user = {
+        id: user.id,
+        telegramId: user.telegramId,
+        role: user.role
+      };
 
-      // Отправка сообщения в комнату
-      io.to(orderId).emit('newMessage', message)
-    })
+      next();
+    } catch (error) {
+      console.error('Socket auth error:', error);
+      next(new Error('Authentication failed'));
+    }
+  });
+
+  io.on('connection', (socket: Socket) => {
+    const user = socket.data.user as SocketUser;
+    console.log(`🔗 User connected: ${user.telegramId} (${user.role || 'no role'})`);
+
+    // Подписываемся на комнату заказа
+    socket.on('joinOrder', (orderId: string) => {
+      socket.join(`order:${orderId}`);
+      console.log(`🔗 User ${user.telegramId} joined order ${orderId}`);
+    });
+
+    // Отписываемся от комнаты заказа
+    socket.on('leaveOrder', (orderId: string) => {
+      socket.leave(`order:${orderId}`);
+      console.log(`🔗 User ${user.telegramId} left order ${orderId}`);
+    });
+
+    // Отправка сообщения в чат заказа
+    socket.on('sendMessage', async (data: ChatMessage) => {
+      try {
+        const order = await prisma.order.findUnique({
+          where: { id: data.orderId }
+        });
+
+        if (!order || order.status === OrderStatus.cancelled) {
+          socket.emit('messageError', { error: 'Чат недоступен' });
+          return;
+        }
+
+        const message = await prisma.message.create({
+          data: {
+            text: data.text,
+            orderId: data.orderId,
+            senderId: user.id
+          },
+          include: {
+            sender: {
+              select: {
+                id: true,
+                username: true,
+                telegramId: true
+              }
+            }
+          }
+        });
+
+        io.to(`order:${data.orderId}`).emit('newMessage', {
+          id: message.id,
+          text: message.text,
+          createdAt: message.createdAt,
+          sender: message.sender
+        });
+      } catch (error) {
+        console.error('Error sending message:', error);
+        socket.emit('messageError', { error: 'Не удалось отправить сообщение' });
+      }
+    });
 
     socket.on('disconnect', () => {
-      console.log(`🔴 Socket disconnected: ${socket.id}`)
-    })
-  })
-}
+      console.log(`🔗 User disconnected: ${user.telegramId}`);
+    });
+  });
+};

@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.acceptOrder = exports.completeOrder = exports.updateOrder = exports.createOrder = exports.getActiveOrders = exports.getAllOrders = void 0;
+exports.acceptOrder = exports.completeOrder = exports.updateOrder = exports.createOrder = exports.getDriverActiveOrders = exports.getActiveOrders = exports.getAllOrders = void 0;
 const prisma_1 = require("../lib/prisma");
 const client_1 = require("@prisma/client");
 const order_validator_1 = require("../validators/order.validator");
@@ -60,6 +60,34 @@ const getActiveOrders = async (req, res) => {
     }
 };
 exports.getActiveOrders = getActiveOrders;
+// 🔹 Получить активные заказы водителя
+const getDriverActiveOrders = async (req, res) => {
+    const user = req.user;
+    if (!user) {
+        res.status(401).json({ error: 'Unauthorized' });
+        return;
+    }
+    try {
+        const orders = await prisma_1.prisma.order.findMany({
+            where: {
+                driverId: user.id,
+                status: client_1.OrderStatus.accepted
+            },
+            include: {
+                passenger: true
+            },
+            orderBy: {
+                createdAt: 'desc'
+            }
+        });
+        res.json(orders);
+    }
+    catch (error) {
+        console.error('Error fetching driver orders:', error);
+        res.status(500).json({ error: 'Could not fetch driver orders' });
+    }
+};
+exports.getDriverActiveOrders = getDriverActiveOrders;
 // 🔹 Создать заказ
 const createOrder = async (req, res) => {
     const user = req.user;

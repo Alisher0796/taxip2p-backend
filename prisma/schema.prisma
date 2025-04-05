@@ -12,43 +12,105 @@ enum Role {
   passenger
 }
 
+enum PickupTime {
+  MINS_15  // Через 15 минут
+  MINS_30  // Через 30 минут
+  HOUR_1   // Через 1 час
+}
+
 enum OrderStatus {
-  pending
-  accepted
-  confirmed
-  completed
+  pending     // Ожидает предложений от водителей
+  negotiating // Идут переговоры о цене
+  accepted    // Водитель принял заказ
+  inProgress  // Поездка началась
+  completed   // Поездка завершена
+  cancelled   // Заказ отменен
+}
+
+enum OfferStatus {
+  pending   // Ожидает ответа
+  accepted  // Принято
+  rejected  // Отклонено
 }
 
 model User {
-  id        String   @id @default(uuid())
-  username  String
-  telegramId String  @unique
-  role      Role
-  createdAt DateTime @default(now())
-  ordersAsPassenger Order[] @relation("PassengerOrders")
-  ordersAsDriver    Order[] @relation("DriverOrders")
+  id          String   @id @default(uuid())
+  username    String
+  telegramId  String   @unique
+  role        Role     @default(passenger)
+  carModel    String?  // Марка авто
+  carNumber   String?  // Госномер
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Отношения
+  ordersAsPassenger Order[]     @relation("PassengerOrders")
+  ordersAsDriver    Order[]     @relation("DriverOrders")
   messages          Message[]
+  offers            PriceOffer[]
+  offerCount        Int         @default(0)  // Счетчик предложений для текущего заказа
 }
 
 model Order {
-  id          String   @id @default(uuid())
+  id          String     @id @default(uuid())
+  fromAddress String     // Адрес отправления
+  toAddress   String     // Адрес назначения
+  price       Float?     // Начальная цена (может быть не указана)
+  finalPrice  Float?     // Итоговая цена после торга
+  pickupTime  PickupTime // Интервал подачи машины
+  comment     String?    // Комментарий к заказу
+  status      OrderStatus
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  startedAt   DateTime?
+  completedAt DateTime?
+  
+  // Отношения
   passenger   User     @relation("PassengerOrders", fields: [passengerId], references: [id])
   passengerId String
   driver      User?    @relation("DriverOrders", fields: [driverId], references: [id])
   driverId    String?
-  price       Float
-  status      OrderStatus
-  createdAt   DateTime @default(now())
-  completedAt DateTime?
   messages    Message[]
+  offers      PriceOffer[]
+
+  // Индексы для оптимизации запросов
+  @@index([status])
+  @@index([passengerId])
+  @@index([driverId])
+}
+
+model PriceOffer {
+  id        String      @id @default(uuid())
+  price     Float
+  status    OfferStatus @default(pending)
+  attempt   Int         @default(1)  // Номер попытки торга (максимум 3)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  
+  // Отношения
+  order     Order    @relation(fields: [orderId], references: [id])
+  orderId   String
+  driver    User     @relation(fields: [driverId], references: [id])
+  driverId  String
+
+  // Индексы
+  @@index([orderId])
+  @@index([driverId])
 }
 
 model Message {
   id        String   @id @default(uuid())
+  text      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Отношения
   order     Order    @relation(fields: [orderId], references: [id])
   orderId   String
   sender    User     @relation(fields: [senderId], references: [id])
   senderId  String
-  text      String
-  createdAt DateTime @default(now())
+
+  // Индексы
+  @@index([orderId])
+  @@index([senderId])
 }

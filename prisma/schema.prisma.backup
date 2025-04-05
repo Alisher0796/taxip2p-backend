@@ -1,0 +1,54 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  driver
+  passenger
+}
+
+enum OrderStatus {
+  pending
+  accepted
+  confirmed
+  completed
+}
+
+model User {
+  id        String   @id @default(uuid())
+  username  String
+  telegramId String  @unique
+  role      Role
+  createdAt DateTime @default(now())
+  ordersAsPassenger Order[] @relation("PassengerOrders")
+  ordersAsDriver    Order[] @relation("DriverOrders")
+  messages          Message[]
+}
+
+model Order {
+  id          String   @id @default(uuid())
+  passenger   User     @relation("PassengerOrders", fields: [passengerId], references: [id])
+  passengerId String
+  driver      User?    @relation("DriverOrders", fields: [driverId], references: [id])
+  driverId    String?
+  price       Float
+  status      OrderStatus
+  createdAt   DateTime @default(now())
+  completedAt DateTime?
+  messages    Message[]
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  order     Order    @relation(fields: [orderId], references: [id])
+  orderId   String
+  sender    User     @relation(fields: [senderId], references: [id])
+  senderId  String
+  text      String
+  createdAt DateTime @default(now())
+}

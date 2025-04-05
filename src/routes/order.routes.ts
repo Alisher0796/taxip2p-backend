@@ -6,7 +6,11 @@ import {
   createOrder,
   updateOrder,
   completeOrder,
-  acceptOrder
+  createPriceOffer,
+  acceptOffer,
+  rejectOffer,
+  startOrder,
+  cancelOrder
 } from '../controllers/order.controller';
 
 import { authenticateTelegram } from '../middleware/auth.middleware';
@@ -31,7 +35,19 @@ router.put('/:id', authenticateTelegram, updateOrder);
 // ✅ Завершить заказ
 router.put('/:id/complete', authenticateTelegram, completeOrder);
 
-// ✅ Принять заказ (водителем)
-router.post('/:id/accept', authenticateTelegram, acceptOrder);
+// 💰 Сделать ценовое предложение
+router.post('/:id/offer', authenticateTelegram, createPriceOffer);
+
+// ✅ Принять ценовое предложение
+router.post('/:id/offer/accept', authenticateTelegram, acceptOffer);
+
+// ❌ Отклонить ценовое предложение
+router.post('/:id/offer/reject', authenticateTelegram, rejectOffer);
+
+// 🚗 Начать поездку
+router.post('/:id/start', authenticateTelegram, startOrder);
+
+// 🗑 Отменить заказ
+router.post('/:id/cancel', authenticateTelegram, cancelOrder);
 
 export default router;
