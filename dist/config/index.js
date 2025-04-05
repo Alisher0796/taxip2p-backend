@@ -14,8 +14,10 @@ exports.config = {
     },
     cors: {
         origins: [
-            'https://taxip2p-frontend.vercel.app',
+            process.env.CLIENT_URL || 'https://taxip2p-frontend.vercel.app',
             'https://taxip2p-frontend-gp43xwdtr-alishers-projects-e810444a.vercel.app',
+            'http://localhost:5173',
+            'http://127.0.0.1:5173',
         ],
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
         allowedHeaders: ['Content-Type', 'Authorization', 'x-telegram-id', 'x-telegram-init-data'],

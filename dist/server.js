@@ -18,20 +18,13 @@ const socket_1 = require("./sockets/socket");
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 const server = http_1.default.createServer(app);
-const allowedOrigins = [
-    'https://taxip2p-frontend.vercel.app',
-    'https://taxip2p-frontend-gp43xwdtr-alishers-projects-e810444a.vercel.app',
-    'http://localhost:5173',
-    'http://127.0.0.1:5173',
-    'http://localhost:56277',
-    'http://127.0.0.1:56277'
-];
-console.log('[CORS] Разрешённые источники:', allowedOrigins);
+const config_1 = require("./config");
+console.log('[CORS] Разрешённые источники:', config_1.config.cors.origins);
 exports.prisma = new client_1.PrismaClient();
 // ✅ CORS для REST API
 app.use((0, cors_1.default)({
     origin: (origin, callback) => {
-        if (!origin || allowedOrigins.includes(origin)) {
+        if (!origin || config_1.config.cors.origins.includes(origin)) {
             callback(null, true);
         }
         else {
@@ -39,14 +32,8 @@ app.use((0, cors_1.default)({
             callback(new Error('CORS origin not allowed'));
         }
     },
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: [
-        'Content-Type',
-        'Authorization',
-        'x-telegram-id',
-        'x-telegram-username',
-        'x-telegram-init-data'
-    ],
+    methods: config_1.config.cors.methods,
+    allowedHeaders: config_1.config.cors.allowedHeaders,
     credentials: true
 }));
 app.use(express_1.default.json());
@@ -62,10 +49,10 @@ app.get('/', (req, res) => {
 // ✅ WebSocket
 exports.io = new socket_io_1.Server(server, {
     cors: {
-        origin: allowedOrigins,
+        origin: config_1.config.cors.origins,
         methods: ['GET', 'POST'],
         credentials: true,
-        allowedHeaders: ['x-telegram-id', 'x-telegram-init-data'] // 👈 добавляем init-data
+        allowedHeaders: config_1.config.cors.allowedHeaders
     }
 });
 (0, socket_1.setupSocket)(exports.io);

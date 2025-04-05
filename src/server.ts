@@ -16,37 +16,24 @@ dotenv.config()
 const app = express()
 const server = http.createServer(app)
 
-const allowedOrigins = [
-  'https://taxip2p-frontend.vercel.app',
-  'https://taxip2p-frontend-gp43xwdtr-alishers-projects-e810444a.vercel.app',
-  'http://localhost:5173',
-  'http://127.0.0.1:5173',
-  'http://localhost:56277',
-  'http://127.0.0.1:56277'
-]
+import { config } from './config'
 
-console.log('[CORS] Разрешённые источники:', allowedOrigins)
+console.log('[CORS] Разрешённые источники:', config.cors.origins)
 
 export const prisma = new PrismaClient()
 
 // ✅ CORS для REST API
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
+    if (!origin || config.cors.origins.includes(origin)) {
       callback(null, true)
     } else {
       console.log('[CORS] Блокирован origin:', origin)
       callback(new Error('CORS origin not allowed'))
     }
   },
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: [
-    'Content-Type',
-    'Authorization',
-    'x-telegram-id',
-    'x-telegram-username',
-    'x-telegram-init-data'
-  ],
+  methods: config.cors.methods,
+  allowedHeaders: config.cors.allowedHeaders,
   credentials: true
 }))
 
@@ -66,10 +53,10 @@ app.get('/', (req, res) => {
 // ✅ WebSocket
 export const io = new Server(server, {
   cors: {
-    origin: allowedOrigins,
+    origin: config.cors.origins,
     methods: ['GET', 'POST'],
     credentials: true,
-    allowedHeaders: ['x-telegram-id', 'x-telegram-init-data'] // 👈 добавляем init-data
+    allowedHeaders: config.cors.allowedHeaders
   }
 })
 
