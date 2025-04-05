@@ -14,6 +14,7 @@ const order_routes_1 = __importDefault(require("./routes/order.routes"));
 const user_routes_1 = __importDefault(require("./routes/user.routes"));
 const message_routes_1 = __importDefault(require("./routes/message.routes"));
 const auth_routes_1 = __importDefault(require("./routes/auth.routes"));
+const profile_routes_1 = __importDefault(require("./routes/profile.routes"));
 const socket_1 = require("./sockets/socket");
 dotenv_1.default.config();
 const app = (0, express_1.default)();
@@ -42,6 +43,7 @@ app.use('/api/orders', order_routes_1.default);
 app.use('/api/users', user_routes_1.default);
 app.use('/api/messages', message_routes_1.default);
 app.use('/api/auth', auth_routes_1.default);
+app.use('/api/profile', profile_routes_1.default);
 // ✅ Корень
 app.get('/', (req, res) => {
     res.send('🚀 TaxiP2P backend работает! CORS точно работает!');

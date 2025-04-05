@@ -13,7 +13,7 @@ import {
   cancelOrder
 } from '../controllers/order.controller';
 
-import { authenticateTelegram } from '../middleware/auth.middleware';
+import { authenticateTelegram } from '../middleware/auth';
 
 const router = express.Router();
 

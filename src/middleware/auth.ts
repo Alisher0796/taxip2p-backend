@@ -2,13 +2,12 @@ import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../lib/prisma';
 import { verifyTelegramWebAppData } from '../lib/telegram';
 
+import { User } from '@prisma/client';
+
 declare global {
   namespace Express {
     interface Request {
-      user?: {
-        id: string;
-        telegramId: number;
-      };
+      user?: User;
     }
   }
 }
@@ -29,7 +28,7 @@ export const authenticateTelegram = async (
       return res.status(401).json({ message: 'Invalid Telegram init data' });
     }
 
-    const { id: telegramId } = data.user;
+    const telegramId = data.user.id.toString();
 
     // Найти или создать пользователя
     const user = await prisma.user.upsert({
@@ -37,15 +36,11 @@ export const authenticateTelegram = async (
       update: {},
       create: {
         telegramId,
-        name: data.user.first_name,
-        username: data.user.username
+        username: data.user.username || `user_${telegramId}`
       }
     });
 
-    req.user = {
-      id: user.id,
-      telegramId: user.telegramId
-    };
+    req.user = user;
 
     next();
   } catch (error) {
