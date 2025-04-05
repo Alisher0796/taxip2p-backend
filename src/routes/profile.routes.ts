@@ -1,6 +1,6 @@
 import express from 'express';
-import { authenticateTelegram } from '../middleware/auth';
-import { getProfile, updateProfile } from '../controllers/profile.controller';
+import { authenticateTelegram } from '../middleware/auth.middleware';
+import { getProfile, updateProfile } from '../controllers/profile.controller.js';
 
 const router = express.Router();
 
