@@ -31,10 +31,10 @@ export const verifyTelegramWebAppData = (initData: string): TelegramInitData | n
       return null;
     }
 
-    // Проверяем время жизни auth_date
+    // Проверяем время жизни auth_date (24 часа)
     const authTimestamp = parseInt(authDate) * 1000;
     const now = Date.now();
-    if (now - authTimestamp > config.security.telegramAuthTTL) {
+    if (now - authTimestamp > 24 * 60 * 60 * 1000) {
       console.error('Telegram auth data expired');
       return null;
     }
@@ -50,16 +50,19 @@ export const verifyTelegramWebAppData = (initData: string): TelegramInitData | n
     const dataCheckString = pairs.join('\n');
 
     // Создаем HMAC-SHA256
-    const secretKey = crypto.createHmac('sha256', 'WebAppData')
+    const secretKey = crypto
+      .createHash('sha256')
       .update(botToken)
       .digest();
 
-    const hmac = crypto.createHmac('sha256', secretKey)
+    const hmac = crypto
+      .createHmac('sha256', secretKey)
       .update(dataCheckString)
       .digest('hex');
 
     if (hmac !== hash) {
-      console.error('Invalid Telegram hash');
+      console.error('Invalid Telegram hash, received:', hash, 'calculated:', hmac);
+      console.error('Data check string:', dataCheckString);
       return null;
     }
 
