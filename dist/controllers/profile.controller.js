@@ -16,9 +16,9 @@ const getProfile = async (req, res) => {
             where: { id: userId }
         });
         if (!user) {
-            return res.status(404).json({ message: 'User not found' });
+            return res.status(404).json({ message: 'Profile not found' });
         }
-        res.json(user);
+        res.json({ data: user });
     }
     catch (error) {
         console.error('Error getting profile:', error);
@@ -28,8 +28,8 @@ const getProfile = async (req, res) => {
 exports.getProfile = getProfile;
 const updateProfile = async (req, res) => {
     try {
-        const userId = req.user?.id;
-        if (!userId) {
+        const authUser = req.user;
+        if (!authUser?.id) {
             return res.status(401).json({ message: 'Unauthorized' });
         }
         const result = updateProfileSchema.safeParse(req.body);
@@ -37,11 +37,29 @@ const updateProfile = async (req, res) => {
             return res.status(400).json({ message: 'Invalid request body' });
         }
         const { role } = result.data;
-        const user = await prisma_1.prisma.user.update({
-            where: { id: userId },
-            data: { role }
+        let user = await prisma_1.prisma.user.findUnique({
+            where: { id: authUser.id }
         });
-        res.json(user);
+        if (!user) {
+            // Создаем нового пользователя, если он не существует
+            user = await prisma_1.prisma.user.create({
+                data: {
+                    id: authUser.id,
+                    role,
+                    telegramId: authUser.telegramId,
+                    username: authUser.username || '',
+                    offerCount: 0
+                }
+            });
+        }
+        else {
+            // Обновляем существующего пользователя
+            user = await prisma_1.prisma.user.update({
+                where: { id: authUser.id },
+                data: { role }
+            });
+        }
+        res.json({ data: user });
     }
     catch (error) {
         console.error('Error updating profile:', error);

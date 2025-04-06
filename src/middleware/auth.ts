@@ -4,10 +4,12 @@ import { verifyTelegramWebAppData } from '../lib/telegram';
 
 import { User } from '@prisma/client';
 
+import { AuthUser } from './auth.middleware';
+
 declare global {
   namespace Express {
     interface Request {
-      user?: User;
+      user?: AuthUser;
     }
   }
 }

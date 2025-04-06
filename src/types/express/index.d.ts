@@ -1,9 +1,7 @@
 import 'express';
+import { AuthUser as BaseAuthUser } from '../auth.types';
 
-export interface AuthUser {
-  id: string;
-  role: 'passenger' | 'driver';
-}
+export type AuthUser = BaseAuthUser;
 
 declare module 'express-serve-static-core' {
   interface Request {

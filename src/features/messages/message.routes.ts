@@ -1,0 +1,11 @@
+import express from 'express'
+import { getMessagesByOrder, createMessage, deleteMessage } from './message.controller'
+import { authenticateTelegram } from '../../middleware/auth.middleware'
+
+const router = express.Router()
+
+router.get('/:orderId', authenticateTelegram, getMessagesByOrder)
+router.post('/', authenticateTelegram, createMessage)
+router.delete('/:id', authenticateTelegram, deleteMessage)
+
+export default router

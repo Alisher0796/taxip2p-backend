@@ -10,6 +10,8 @@ export interface AuthUser {
   createdAt: Date
   updatedAt: Date
   offerCount: number
+  rating: number
+  isBlocked: boolean
 }
 
 export interface TelegramAuthData {

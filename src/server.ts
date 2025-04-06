@@ -1,70 +1,103 @@
-import express from 'express'
-import http from 'http'
-import cors from 'cors'
-import dotenv from 'dotenv'
-import { Server } from 'socket.io'
-import { PrismaClient } from '@prisma/client'
+import express from 'express';
+import http from 'http';
+import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import { prisma } from '@lib/prisma';
+import compression from 'compression';
 
-import orderRoutes from './routes/order.routes'
-import userRoutes from './routes/user.routes'
-import messageRoutes from './routes/message.routes'
-import authRoutes from './routes/auth.routes'
-import profileRoutes from './routes/profile.routes'
-import { setupSocket } from './sockets/socket'
+import orderRouter from '@features/orders/orders.routes';
+import userRouter from '@features/users/user.routes';
+import messageRouter from '@features/messages/message.routes';
+import authRouter from '@features/auth/auth.routes';
+import profileRouter from '@features/profile/profile.routes';
+import { config } from '@config/index';
+import { initializeSocket } from '@lib/socket';
+import { authenticateTelegram } from '@middleware/auth.middleware';
 
-dotenv.config()
+// Создаем Express приложение
+const app = express();
+const server = http.createServer(app);
 
-const app = express()
-const server = http.createServer(app)
+// Основные middleware
+app.use(helmet());
+app.use(compression());
 
-import { config } from './config'
-
-console.log('[CORS] Разрешённые источники:', config.cors.origins)
-
-export const prisma = new PrismaClient()
-
-// ✅ CORS для REST API
+// CORS с белым списком
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin || config.cors.origins.includes(origin)) {
-      callback(null, true)
+      callback(null, true);
     } else {
-      console.log('[CORS] Блокирован origin:', origin)
-      callback(new Error('CORS origin not allowed'))
+      callback(new Error('CORS origin not allowed'));
     }
   },
   methods: config.cors.methods,
   allowedHeaders: config.cors.allowedHeaders,
-  credentials: true
-}))
+  credentials: true,
+  maxAge: 86400 // 24 часа кэширование preflight
+}));
 
-app.use(express.json())
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 минут
+  max: 100, // Максимум 100 запросов с одного IP
+  message: { error: 'Too many requests' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
 
-// 📦 API
-app.use('/api/orders', orderRoutes)
-app.use('/api/users', userRoutes)
-app.use('/api/messages', messageRoutes)
-app.use('/api/auth', authRoutes)
-app.use('/api/profile', profileRoutes)
+app.use(limiter);
 
-// ✅ Корень
-app.get('/', (req, res) => {
-  res.send('🚀 TaxiP2P backend работает! CORS точно работает!')
-})
+// Парсинг JSON с ограничением размера
+app.use(express.json({ limit: '10kb' }));
 
-// ✅ WebSocket
-export const io = new Server(server, {
-  cors: {
-    origin: config.cors.origins,
-    methods: ['GET', 'POST'],
-    credentials: true,
-    allowedHeaders: config.cors.allowedHeaders
-  }
-})
+// Базовая защита
+app.disable('x-powered-by');
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  next();
+});
 
-setupSocket(io)
+// API роуты с аутентификацией
+app.use('/api/orders', authenticateTelegram, orderRouter);
+app.use('/api/users', authenticateTelegram, userRouter);
+app.use('/api/messages', authenticateTelegram, messageRouter);
+app.use('/api/auth', authRouter);
+app.use('/api/profile', authenticateTelegram, profileRouter);
 
-const PORT = process.env.PORT || 8080
+// Обработка ошибок
+app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error('[App] Error:', err instanceof Error ? err.message : 'Unknown error');
+  res.status(500).json({ error: 'Internal server error' });
+});
+
+// Инициализируем WebSocket и сохраняем в app.locals
+app.locals.io = initializeSocket(server);
+
+// Graceful shutdown
+const shutdown = async () => {
+  console.log('\n[App] Shutting down...');
+  
+  // Закрываем HTTP сервер и WebSocket соединения
+  server.close(() => {
+    console.log('[HTTP/WebSocket] Closed all connections');
+  });
+
+  // Закрываем соединение с БД
+  await prisma.$disconnect();
+  console.log('[Database] Disconnected');
+
+  process.exit(0);
+};
+
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);
+
+// Запуск сервера
+const PORT = process.env.PORT || 8080;
 server.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`)
-})
+  console.log(`[App] Server running on port ${PORT}`);
+});

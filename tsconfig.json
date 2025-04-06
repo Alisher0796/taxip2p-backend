@@ -7,7 +7,17 @@
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "typeRoots": ["./node_modules/@types", "./src/types"]
+    "moduleResolution": "node",
+    "baseUrl": "./src",
+    "typeRoots": ["./node_modules/@types", "./src/types"],
+    "paths": {
+      "@lib/*": ["lib/*"],
+      "@types/*": ["types/*"],
+      "@features/*": ["features/*"],
+      "@middleware/*": ["middleware/*"],
+      "@config/*": ["config/*"],
+      "@validators/*": ["validators/*"]
+    }
   },
   "include": ["src"]
 }

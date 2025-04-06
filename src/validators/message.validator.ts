@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { config } from '../config'
+import { config } from '@config/index'
 
 export const createMessageSchema = z.object({
   orderId: z.string().uuid('Некорректный ID заказа'),

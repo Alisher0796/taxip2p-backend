@@ -10,60 +10,57 @@ const botToken = config_1.config.botToken;
 if (!botToken) {
     throw new Error('BOT_TOKEN environment variable is not set');
 }
+// Генерируем секретный ключ один раз при старте сервера
+const secretKey = crypto_1.default
+    .createHmac('sha256', 'WebAppData')
+    .update(botToken)
+    .digest();
+// Максимальное время жизни auth_date (24 часа)
+const MAX_AUTH_AGE = 24 * 60 * 60; // в секундах
 const verifyTelegramWebAppData = (initData) => {
     try {
         const params = new URLSearchParams(initData);
+        // 1. Проверяем наличие всех необходимых полей
         const receivedHash = params.get('hash');
-        if (!receivedHash) {
-            console.error('[Telegram] Missing hash');
-            return null;
-        }
-        // Удаляем hash перед генерацией подписи
-        params.delete('hash');
-        // Строим data_check_string (строго по алфавиту)
-        const dataCheckString = Array.from(params.entries())
-            .sort(([a], [b]) => a.localeCompare(b))
-            .map(([key, value]) => `${key}=${value}`)
-            .join('\n');
-        // Генерируем секретный ключ
-        const secretKey = crypto_1.default
-            .createHmac('sha256', 'WebAppData')
-            .update(botToken)
-            .digest();
-        // Считаем HMAC
-        const calculatedHash = crypto_1.default
-            .createHmac('sha256', secretKey)
-            .update(dataCheckString)
-            .digest('hex');
-        // Лог отладки
-        console.log('Telegram initData validation:', {
-            dataCheckString,
-            calculatedHash,
-            receivedHash,
-            match: calculatedHash === receivedHash,
-        });
-        if (calculatedHash !== receivedHash) {
-            console.warn('[Telegram] Invalid hash');
-            return null;
-        }
         const userStr = params.get('user');
         const queryId = params.get('query_id');
         const authDateStr = params.get('auth_date');
-        if (!userStr || !queryId || !authDateStr) {
+        if (!receivedHash || !userStr || !queryId || !authDateStr) {
             console.warn('[Telegram] Missing required fields');
             return null;
         }
+        // 2. Проверяем время жизни auth_date
+        const authDate = parseInt(authDateStr, 10);
+        if (isNaN(authDate)) {
+            console.error('[Telegram] Invalid auth_date');
+            return null;
+        }
+        const now = Math.floor(Date.now() / 1000);
+        if (now - authDate > MAX_AUTH_AGE) {
+            console.error('[Telegram] Auth date expired');
+            return null;
+        }
+        // 3. Парсим данные пользователя
         let user;
         try {
             user = JSON.parse(userStr);
         }
         catch (err) {
-            console.error('[Telegram] Failed to parse user JSON:', err);
+            console.error('[Telegram] Failed to parse user JSON');
             return null;
         }
-        const authDate = parseInt(authDateStr, 10);
-        if (isNaN(authDate)) {
-            console.error('[Telegram] Invalid auth_date');
+        // 4. Проверяем подпись
+        params.delete('hash');
+        const dataCheckString = Array.from(params.entries())
+            .sort(([a], [b]) => a.localeCompare(b))
+            .map(([key, value]) => `${key}=${value}`)
+            .join('\n');
+        const calculatedHash = crypto_1.default
+            .createHmac('sha256', secretKey)
+            .update(dataCheckString)
+            .digest('hex');
+        if (calculatedHash !== receivedHash) {
+            console.warn('[Telegram] Invalid hash');
             return null;
         }
         return {
@@ -74,7 +71,7 @@ const verifyTelegramWebAppData = (initData) => {
         };
     }
     catch (error) {
-        console.error('Telegram WebApp verification error:', error);
+        console.error('[Telegram] Verification error');
         return null;
     }
 };
