@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
 import { z } from 'zod';
+import { AuthUser } from '../middleware/auth.middleware';
 
 const updateProfileSchema = z.object({
   role: z.enum(['driver', 'passenger'])
@@ -18,10 +19,10 @@ export const getProfile = async (req: Request, res: Response) => {
     });
 
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({ message: 'Profile not found' });
     }
 
-    res.json(user);
+    res.json({ data: user });
   } catch (error) {
     console.error('Error getting profile:', error);
     res.status(500).json({ message: 'Internal server error' });
@@ -30,8 +31,8 @@ export const getProfile = async (req: Request, res: Response) => {
 
 export const updateProfile = async (req: Request, res: Response) => {
   try {
-    const userId = req.user?.id;
-    if (!userId) {
+    const authUser = req.user as AuthUser | undefined;
+    if (!authUser?.id) {
       return res.status(401).json({ message: 'Unauthorized' });
     }
 
@@ -42,12 +43,30 @@ export const updateProfile = async (req: Request, res: Response) => {
 
     const { role } = result.data;
 
-    const user = await prisma.user.update({
-      where: { id: userId },
-      data: { role }
+    let user = await prisma.user.findUnique({
+      where: { id: authUser.id }
     });
 
-    res.json(user);
+    if (!user) {
+      // Создаем нового пользователя, если он не существует
+      user = await prisma.user.create({
+        data: {
+          id: authUser.id,
+          role,
+          telegramId: authUser.telegramId,
+          username: authUser.username || '',
+          offerCount: 0
+        }
+      });
+    } else {
+      // Обновляем существующего пользователя
+      user = await prisma.user.update({
+        where: { id: authUser.id },
+        data: { role }
+      });
+    }
+
+    res.json({ data: user });
   } catch (error) {
     console.error('Error updating profile:', error);
     res.status(500).json({ message: 'Internal server error' });
