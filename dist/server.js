@@ -3,28 +3,21 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.io = exports.prisma = void 0;
 const express_1 = __importDefault(require("express"));
 const http_1 = __importDefault(require("http"));
 const cors_1 = __importDefault(require("cors"));
 const helmet_1 = __importDefault(require("helmet"));
 const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
-const socket_io_1 = require("socket.io");
-const client_1 = require("@prisma/client");
+const prisma_1 = require("@lib/prisma");
 const compression_1 = __importDefault(require("compression"));
-const orders_routes_1 = __importDefault(require("./routes/orders.routes"));
-const user_routes_1 = __importDefault(require("./routes/user.routes"));
-const message_routes_1 = __importDefault(require("./routes/message.routes"));
-const auth_routes_1 = __importDefault(require("./routes/auth.routes"));
-const profile_routes_1 = __importDefault(require("./routes/profile.routes"));
-const socket_1 = require("./sockets/socket");
-const config_1 = require("./config");
-const auth_middleware_1 = require("./middleware/auth.middleware");
-// Инициализация PrismaClient с логированием только ошибок
-exports.prisma = new client_1.PrismaClient({
-    log: ['error'],
-    errorFormat: 'minimal'
-});
+const orders_routes_1 = __importDefault(require("@features/orders/orders.routes"));
+const user_routes_1 = __importDefault(require("@features/users/user.routes"));
+const message_routes_1 = __importDefault(require("@features/messages/message.routes"));
+const auth_routes_1 = __importDefault(require("@features/auth/auth.routes"));
+const profile_routes_1 = __importDefault(require("@features/profiles/profile.routes"));
+const index_1 = require("@config/index");
+const socket_1 = require("@lib/socket");
+const auth_middleware_1 = require("@middleware/auth.middleware");
 // Создаем Express приложение
 const app = (0, express_1.default)();
 const server = http_1.default.createServer(app);
@@ -34,15 +27,15 @@ app.use((0, compression_1.default)());
 // CORS с белым списком
 app.use((0, cors_1.default)({
     origin: (origin, callback) => {
-        if (!origin || config_1.config.cors.origins.includes(origin)) {
+        if (!origin || index_1.config.cors.origins.includes(origin)) {
             callback(null, true);
         }
         else {
             callback(new Error('CORS origin not allowed'));
         }
     },
-    methods: config_1.config.cors.methods,
-    allowedHeaders: config_1.config.cors.allowedHeaders,
+    methods: index_1.config.cors.methods,
+    allowedHeaders: index_1.config.cors.allowedHeaders,
     credentials: true,
     maxAge: 86400 // 24 часа кэширование preflight
 }));
@@ -76,41 +69,24 @@ app.use((err, req, res, next) => {
     console.error('[App] Error:', err instanceof Error ? err.message : 'Unknown error');
     res.status(500).json({ error: 'Internal server error' });
 });
-// WebSocket с улучшенной конфигурацией
-exports.io = new socket_io_1.Server(server, {
-    cors: {
-        origin: config_1.config.cors.origins,
-        methods: ['GET', 'POST'],
-        credentials: true,
-        allowedHeaders: config_1.config.cors.allowedHeaders
-    },
-    pingTimeout: 60000,
-    pingInterval: 25000,
-    transports: ['websocket'],
-    connectTimeout: 10000,
-    maxHttpBufferSize: 1e6 // 1MB
-});
-(0, socket_1.setupSocket)(exports.io);
+// Инициализируем WebSocket и сохраняем в app.locals
+app.locals.io = (0, socket_1.initializeSocket)(server);
 // Graceful shutdown
 const shutdown = async () => {
     console.log('\n[App] Shutting down...');
-    // Закрываем WebSocket соединения
-    exports.io.close(() => {
-        console.log('[WebSocket] Closed all connections');
-    });
-    // Закрываем HTTP сервер
+    // Закрываем HTTP сервер и WebSocket соединения
     server.close(() => {
-        console.log('[HTTP] Closed all connections');
+        console.log('[HTTP/WebSocket] Closed all connections');
     });
     // Закрываем соединение с БД
-    await exports.prisma.$disconnect();
+    await prisma_1.prisma.$disconnect();
     console.log('[Database] Disconnected');
     process.exit(0);
 };
 process.on('SIGTERM', shutdown);
 process.on('SIGINT', shutdown);
 // Запуск сервера
-const PORT = process.env.PORT || 8080;
+const PORT = 5002; // Временно используем другой порт
 server.listen(PORT, () => {
     console.log(`[App] Server running on port ${PORT}`);
 });

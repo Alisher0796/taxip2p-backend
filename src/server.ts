@@ -10,7 +10,7 @@ import orderRouter from '@features/orders/orders.routes';
 import userRouter from '@features/users/user.routes';
 import messageRouter from '@features/messages/message.routes';
 import authRouter from '@features/auth/auth.routes';
-import profileRouter from '@features/profile/profile.routes';
+import profileRouter from '@features/profiles/profile.routes';
 import { config } from '@config/index';
 import { initializeSocket } from '@lib/socket';
 import { authenticateTelegram } from '@middleware/auth.middleware';
@@ -97,7 +97,7 @@ process.on('SIGTERM', shutdown);
 process.on('SIGINT', shutdown);
 
 // Запуск сервера
-const PORT = process.env.PORT || 8080;
+const PORT = 5002; // Временно используем другой порт
 server.listen(PORT, () => {
   console.log(`[App] Server running on port ${PORT}`);
 });

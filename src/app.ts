@@ -7,7 +7,7 @@ import orderRouter from './features/orders/orders.routes';
 import userRouter from './features/users/user.routes';
 import messageRouter from './features/messages/message.routes';
 import authRouter from './features/auth/auth.routes';
-import profileRouter from './features/profile/profile.routes';
+import profileRouter from './features/profiles/profile.routes';
 import { config } from './config';
 import { initializeSocket } from './lib/socket';
 import { authenticateTelegram } from './middleware/auth.middleware';

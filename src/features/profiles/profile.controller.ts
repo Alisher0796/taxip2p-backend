@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
-import { prisma } from '../lib/prisma';
+import { prisma } from '@lib/prisma';
 import { z } from 'zod';
-import { AuthUser } from '../middleware/auth.middleware';
+import { AuthUser } from '@middleware/auth.middleware';
 
 const updateProfileSchema = z.object({
   role: z.enum(['driver', 'passenger'])

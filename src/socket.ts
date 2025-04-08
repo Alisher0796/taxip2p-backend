@@ -1,6 +1,6 @@
 import { Server } from 'socket.io';
 import { Server as HttpServer } from 'http';
-import { config } from './config';
+import { config } from '@config/index';
 import { ClientToServerEvents, ServerToClientEvents, SocketIOServer, SocketIOSocket } from './types/socket';
 
 let io: SocketIOServer;

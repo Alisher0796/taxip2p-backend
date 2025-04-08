@@ -33,6 +33,7 @@ exports.config = {
     },
     security: {
         telegramAuthTTL: parseInt(process.env.TELEGRAM_AUTH_TTL || '86400000'),
+        jwtSecret: process.env.JWT_SECRET || 'your-secret-key',
         rateLimits: {
             api: {
                 windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'),
