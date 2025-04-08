@@ -61,6 +61,11 @@ app.use((req, res, next) => {
   next();
 });
 
+// Healthcheck эндпоинт для проверки работоспособности сервера
+app.get('/', (req, res) => {
+  res.status(200).json({ status: 'ok', message: 'Server is running' });
+});
+
 // API роуты с аутентификацией
 app.use('/api/orders', authenticateTelegram, orderRouter);
 app.use('/api/users', authenticateTelegram, userRouter);
