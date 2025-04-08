@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "nodemon --exec ts-node -r ./tsconfig-paths-bootstrap.js src/server.ts",
     "build": "npm run clean && npm run generate && tsc",
-    "start": "npm run migrate:deploy && node -r ./tsconfig-paths-bootstrap.js dist/server.js",
+    "start": "node -r ./tsconfig-paths-bootstrap.js dist/server.js",
+    "start:with-migrate": "npm run migrate:deploy && npm run start",
     "migrate:dev": "prisma migrate dev",
     "migrate:deploy": "prisma migrate deploy",
     "generate": "prisma generate",
