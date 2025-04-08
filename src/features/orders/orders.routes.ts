@@ -18,8 +18,8 @@ import {
 function createOrderRoutes(controller: OrderController): Router {
   const router = Router();
 
-  // Apply authentication to all routes
-  router.use(authenticateTelegram);
+  // Аутентификация уже применяется в server.ts к этому маршруту
+  // поэтому мы убираем дублирующую проверку
 
   // Order management routes
   router.post(
@@ -53,6 +53,12 @@ function createOrderRoutes(controller: OrderController): Router {
   );
 
   // Query routes
+  // Маршрут для получения всех заказов
+  router.get(
+    '/',
+    controller.getActiveOrders
+  );
+  
   router.get(
     '/active',
     controller.getActiveOrders
