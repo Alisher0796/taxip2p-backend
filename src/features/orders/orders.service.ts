@@ -1,12 +1,12 @@
 import { PrismaClient, OrderStatus, User, Role } from '@prisma/client';
-import { RedisClientType } from 'redis';
+// Импортируем интерфейс вместо конкретного типа
 import { CreateOrderDTO, UpdateOrderDTO, CreatePriceOfferDTO, OrderError, OrderResponse } from './orders.types';
 import { formatOrderResponse, invalidateActiveOrdersCache, validateOrderTransition } from './orders.utils';
 
 export class OrderService {
   constructor(
     private prisma: PrismaClient,
-    private redis: RedisClientType
+    private redis: any // Используем any для совместимости с любым типом Redis клиента
   ) {}
 
   async createOrder({ fromAddress, toAddress, price, comment, pickupTime }: CreateOrderDTO, userId: string): Promise<OrderResponse> {
