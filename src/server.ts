@@ -20,8 +20,10 @@ const app = express();
 const server = http.createServer(app);
 
 // Основные middleware
-app.use(helmet());
+app.use(helmet({ contentSecurityPolicy: false }));
 app.use(compression());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // CORS с белым списком
 app.use(cors({
@@ -61,9 +63,23 @@ app.use((req, res, next) => {
   next();
 });
 
-// Healthcheck эндпоинт для проверки работоспособности сервера
+// Healthcheck эндпоинты для проверки работоспособности сервера
 app.get('/', (req, res) => {
   res.status(200).json({ status: 'ok', message: 'Server is running' });
+});
+
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'ok',
+    uptime: process.uptime(),
+    timestamp: Date.now(),
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
+// Еще один endpoint для Railway healthcheck
+app.head('/', (req, res) => {
+  res.status(200).end();
 });
 
 // API роуты с аутентификацией
@@ -101,8 +117,8 @@ const shutdown = async () => {
 process.on('SIGTERM', shutdown);
 process.on('SIGINT', shutdown);
 
-// Запуск сервера
-const PORT = 5002; // Временно используем другой порт
+// Запускаем сервер на всех интерфейсах (0.0.0.0)
+const PORT = config.port || 5002;
 server.listen(PORT, () => {
   console.log(`[App] Server running on port ${PORT}`);
 });
