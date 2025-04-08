@@ -17,13 +17,15 @@ const auth_routes_1 = __importDefault(require("@features/auth/auth.routes"));
 const profile_routes_1 = __importDefault(require("@features/profiles/profile.routes"));
 const index_1 = require("@config/index");
 const socket_1 = require("@lib/socket");
-const auth_middleware_1 = require("@middleware/auth.middleware");
+const test_auth_middleware_1 = require("@middleware/test-auth.middleware");
 // Создаем Express приложение
 const app = (0, express_1.default)();
 const server = http_1.default.createServer(app);
 // Основные middleware
-app.use((0, helmet_1.default)());
+app.use((0, helmet_1.default)({ contentSecurityPolicy: false }));
 app.use((0, compression_1.default)());
+app.use(express_1.default.json());
+app.use(express_1.default.urlencoded({ extended: true }));
 // CORS с белым списком
 app.use((0, cors_1.default)({
     origin: (origin, callback) => {
@@ -58,12 +60,30 @@ app.use((req, res, next) => {
     res.setHeader('X-XSS-Protection', '1; mode=block');
     next();
 });
-// API роуты с аутентификацией
-app.use('/api/orders', auth_middleware_1.authenticateTelegram, orders_routes_1.default);
-app.use('/api/users', auth_middleware_1.authenticateTelegram, user_routes_1.default);
-app.use('/api/messages', auth_middleware_1.authenticateTelegram, message_routes_1.default);
+// Healthcheck эндпоинты для проверки работоспособности сервера
+app.get('/', (req, res) => {
+    res.status(200).json({ status: 'ok', message: 'Server is running' });
+});
+app.get('/health', (req, res) => {
+    res.status(200).json({
+        status: 'ok',
+        uptime: process.uptime(),
+        timestamp: Date.now(),
+        environment: process.env.NODE_ENV || 'development'
+    });
+});
+// Еще один endpoint для Railway healthcheck
+app.head('/', (req, res) => {
+    res.status(200).end();
+});
+// API роуты (с тестовой аутентификацией для тестирования)
+// Добавляем тестовый middleware для всех API маршрутов
+app.use('/api', test_auth_middleware_1.testAuthMiddleware);
+app.use('/api/orders', orders_routes_1.default);
+app.use('/api/users', user_routes_1.default);
+app.use('/api/messages', message_routes_1.default);
 app.use('/api/auth', auth_routes_1.default);
-app.use('/api/profile', auth_middleware_1.authenticateTelegram, profile_routes_1.default);
+app.use('/api/profile', profile_routes_1.default);
 // Обработка ошибок
 app.use((err, req, res, next) => {
     console.error('[App] Error:', err instanceof Error ? err.message : 'Unknown error');
@@ -85,8 +105,8 @@ const shutdown = async () => {
 };
 process.on('SIGTERM', shutdown);
 process.on('SIGINT', shutdown);
-// Запуск сервера
-const PORT = 5002; // Временно используем другой порт
+// Запускаем сервер на всех интерфейсах (0.0.0.0)
+const PORT = index_1.config.port || 5002;
 server.listen(PORT, () => {
     console.log(`[App] Server running on port ${PORT}`);
 });
