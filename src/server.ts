@@ -14,6 +14,7 @@ import profileRouter from '@features/profiles/profile.routes';
 import { config } from '@config/index';
 import { initializeSocket } from '@lib/socket';
 import { authenticateTelegram } from '@middleware/auth.middleware';
+import { testAuthMiddleware } from '@middleware/test-auth.middleware';
 
 // Создаем Express приложение
 const app = express();
@@ -82,7 +83,10 @@ app.head('/', (req, res) => {
   res.status(200).end();
 });
 
-// API роуты (временно без аутентификации для тестирования)
+// API роуты (с тестовой аутентификацией для тестирования)
+// Добавляем тестовый middleware для всех API маршрутов
+app.use('/api', testAuthMiddleware);
+
 app.use('/api/orders', orderRouter);
 app.use('/api/users', userRouter);
 app.use('/api/messages', messageRouter);
