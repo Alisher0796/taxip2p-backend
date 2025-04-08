@@ -37,6 +37,29 @@ export const authenticateTelegram = async (
   next: NextFunction
 ) => {
   try {
+    // Проверяем, включен ли режим разработки и отладки аутентификации
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    const skipAuth = isDevelopment && process.env.SKIP_AUTH === 'true';
+    
+    if (skipAuth) {
+      // В режиме разработки с SKIP_AUTH создаем тестового пользователя
+      console.log('[Auth] Development mode: Using test user');
+      req.user = {
+        id: 'test-user-id-123456789',
+        username: 'test_user',
+        telegramId: '123456789',
+        role: 'passenger',
+        carModel: null,
+        carNumber: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        offerCount: 0,
+        rating: 5,
+        isBlocked: false
+      } as AuthUser;
+      return next();
+    }
+    
     const initData = req.headers['x-telegram-init-data'];
     
     // 1. Проверяем наличие и формат данных
